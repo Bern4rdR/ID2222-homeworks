@@ -2,6 +2,10 @@ import numpy as np
 from functools import reduce
 import hashlib
 from math import pow
+import time
+from get_data import get_drug_data
+
+shingle_size = 5
 
 def generate_hashes(numHashes: int):
     funcs = []
@@ -59,17 +63,15 @@ def fastminhash(times, shingles):
     rows = [np.isin(all_sh, sh_arr) for sh_arr in shingles]
     # row is document, column is shingle
     shingle_matrix = np.array(rows)
-    print(shingle_matrix.shape)
-    k = 15 # fix later
+    k = min(times, shingle_matrix.shape[1]) # fix later
     hashes = generate_hashes(k)
     # hashes for shingle n are columns, shingles are rows
     hash_vals = np.array([[hashes[i](all_sh[r]) for i in range(k)] for r in range(all_sh.shape[0])])
-    print(hash_vals)
-    signature_matrix = np.full(shingle_matrix.shape, np.inf)
+    signature_matrix = np.full((shingle_matrix.shape[0], k), np.inf)
     for r in range(shingle_matrix.shape[0]):
         for c in range(shingle_matrix.shape[1]):
             if shingle_matrix[r, c]:
-                for i in range(shingle_matrix.shape[1]):
+                for i in range(signature_matrix.shape[1]):
                         signature_matrix[r, i] = min(signature_matrix[r,i], hash_vals[c, i])
     return signature_matrix
         
@@ -89,19 +91,50 @@ def jaccard_ndarray(nd1, nd2):
     match_rows = sum([1 for i in range(nd1.shape[0]) if nd1[i] == nd2[i]])
     return match_rows/nd1.shape[0]
    
+def minhashmany(doc_list, permutations):
+    shingle_list = [list(shingle(shingle_size, doc)) for doc in doc_list]
+    start = time.perf_counter()
+    signature = minhash(permutations, shingle_list)
+    end = time.perf_counter()
+    print(f"Min Hash Time ms: {(end - start)}")
 
 
-if __name__ == "__main__":
+def fastminmany(doc_list, permutations):
+    shingle_list = [list(shingle_md5(shingle_size, doc)) for doc in doc_list]
+    start = time.perf_counter()
+    signature = fastminhash(permutations, shingle_list)
+    end = time.perf_counter()
+    print(f"Fast Min Hash Time ms: {(end - start)}")
+
+def benchmark_minhash(doc_list, permutations):
+    minhashmany(doc_list, permutations)
+    fastminmany(doc_list, permutations)
+
+def basic_test():
     doc1 = "Hello, World!"
     doc2 = "hello, world!"
+    # br, ser, cr = get_drug_data()
+    # doc1 = br[0]
+    # doc2 = br[1]
     sh1 = shingle(3, doc1)
     sh2 = shingle(3, doc2)
     sh1_m5 = shingle_md5(3, doc1)
     sh2_m5 = shingle_md5(3, doc2)
-    signature = fastminhash(10, [list(sh1_m5), list(sh2_m5)]) 
+    signature = fastminhash(100, [list(sh1_m5), list(sh2_m5)]) 
     print(f"Jaccard Fast Min Hash: {jaccard_ndarray(signature[0], signature[1])}")
 
-    print(f"Minhash:\n{minhash(10, [list(sh1), list(sh2)])}")
+    # print(f"Minhash:\n{minhash(10, [list(sh1), list(sh2)])}")
     print(f"Sim. estimate: {compare(3, doc1, doc2)}")
     print(f"Jaccard: {jaccard(sh1, sh2)}")
-# 
+
+
+if __name__ == "__main__":
+    print("Running Basic Test")
+    basic_test()
+    print("Running Many Benchmark")
+    doc_lists = get_drug_data()
+    docs = []
+    for doc in doc_lists[0]:
+        if type(doc) == type('sr') and len(doc) >= shingle_size:
+            docs.append(doc)
+    benchmark_minhash(docs, 100)
