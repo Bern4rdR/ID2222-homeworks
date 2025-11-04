@@ -63,7 +63,7 @@ def fastminhash(times, shingles):
     rows = [np.isin(all_sh, sh_arr) for sh_arr in shingles]
     # row is document, column is shingle
     shingle_matrix = np.array(rows)
-    k = min(times, shingle_matrix.shape[1]) # fix later
+    k = times #k = min(times, shingle_matrix.shape[1]) # fix later
     hashes = generate_hashes(k)
     # hashes for shingle n are columns, shingles are rows
     hash_vals = np.array([[hashes[i](all_sh[r]) for i in range(k)] for r in range(all_sh.shape[0])])
@@ -75,11 +75,27 @@ def fastminhash(times, shingles):
                         signature_matrix[r, i] = min(signature_matrix[r,i], hash_vals[c, i])
     return signature_matrix
         
-
+# this one hashes index instead of shingle... (as per the docs)
+def fastminhashindex(times, shingles):
+    all_sh = np.unique(np.concatenate(shingles))
+    rows = [np.isin(all_sh, sh_arr) for sh_arr in shingles]
+    # row is document, column is shingle
+    shingle_matrix = np.array(rows)
+    k = times #k = min(times, shingle_matrix.shape[1]) # fix later
+    hashes = generate_hashes(k)
+    # hashes for shingle n are columns, shingles are rows
+    hash_vals = np.array([[hashes[i](r) for i in range(k)] for r in range(all_sh.shape[0])])
+    signature_matrix = np.full((shingle_matrix.shape[0], k), np.inf)
+    for r in range(shingle_matrix.shape[0]):
+        for c in range(shingle_matrix.shape[1]):
+            if shingle_matrix[r, c]:
+                for i in range(signature_matrix.shape[1]):
+                        signature_matrix[r, i] = min(signature_matrix[r,i], hash_vals[c, i])
+    return signature_matrix
 
 def compare(k, doc1, doc2, perms=100):
-    sh1 = shingle(k, doc1)
-    sh2 = shingle(k, doc2)
+    sh1 = shingle_md5(k, doc1)
+    sh2 = shingle_md5(k, doc2)
 
     mh = minhash(perms, [list(sh1), list(sh2)])
     same = sum([1 for i in range(len(mh)) if mh[i][0] == mh[i][1]])
@@ -96,7 +112,7 @@ def minhashmany(doc_list, permutations):
     start = time.perf_counter()
     signature = minhash(permutations, shingle_list)
     end = time.perf_counter()
-    print(f"Min Hash Time ms: {(end - start)}")
+    print(f"Min Hash Time ms: {(end - start)} on {len(doc_list)} documents")
 
 
 def fastminmany(doc_list, permutations):
@@ -104,11 +120,44 @@ def fastminmany(doc_list, permutations):
     start = time.perf_counter()
     signature = fastminhash(permutations, shingle_list)
     end = time.perf_counter()
-    print(f"Fast Min Hash Time ms: {(end - start)}")
+    print(f"Fast Min Hash Time ms: {(end - start)} on {len(doc_list)} documents")
+    return signature
+
+def fastminindexmany(doc_list, permutations):
+    shingle_list = [list(shingle_md5(shingle_size, doc)) for doc in doc_list]
+    start = time.perf_counter()
+    signature = fastminhashindex(permutations, shingle_list)
+    end = time.perf_counter()
+    print(f"Fast Min Hash Index Time ms: {(end - start)} on {len(doc_list)} documents")
+
+def find_pairs(doc_list, permutations, min_thresholds): 
+    sig_matrix = fastminmany(doc_list, permutations)
+    sims = []
+    for threshold in min_thresholds:
+        count = 0
+        sim_pair = None
+        for i in range(sig_matrix.shape[0]):
+            for j in range(i+1, sig_matrix.shape[0]):
+                if jaccard_ndarray(sig_matrix[i], sig_matrix[j]) > threshold:
+                    if count == 0:
+                        sim_pair = (doc_list[i], doc_list[j])
+                        count += 1
+                    else: count += 1
+        if count > 0:
+            sims.append((count, sim_pair[0], sim_pair[1]))
+        else: sims.append((count, "", ""))
+    for sim in sims:
+        print(f"Similar Count: {sim[0]}\n Doc 1: {sim[1]} \n Doc 2: {sim[2]}")
+
+
+"""
+Test and benchmarking below this point
+"""
 
 def benchmark_minhash(doc_list, permutations):
     minhashmany(doc_list, permutations)
     fastminmany(doc_list, permutations)
+    # fastminindexmany(doc_list, permutations)
 
 def basic_test():
     doc1 = "Hello, World!"
@@ -127,14 +176,31 @@ def basic_test():
     print(f"Sim. estimate: {compare(3, doc1, doc2)}")
     print(f"Jaccard: {jaccard(sh1, sh2)}")
 
+def real_doc_test():
+    perms = 100000
+    doc_lists = get_drug_data()
+    brc = doc_lists[0][0:2]
+    shingles_fmh = [list(shingle_md5(shingle_size, doc)) for doc in brc[:2]]
+    sig_fmh = fastminhash(perms, shingles_fmh)
+    # sig_fmhi = fastminhashindex(perms, shingles_fmh) # always shoots high and isn't faster
+    print(f"Min Hash sim esitmate: {compare(shingle_size, brc[0], brc[1], perms)}")
+    print(f"Jaccard Fast Min Hash: {jaccard_ndarray(sig_fmh[0], sig_fmh[1])}")
+    # print(f"Jaccard Fast Min Index Hash: {jaccard_ndarray(sig_fmhi[0], sig_fmhi[1])}")
+    print(f"Jaccard: {jaccard(set(shingles_fmh[0]), set(shingles_fmh[1]))}")
+
+
 
 if __name__ == "__main__":
-    print("Running Basic Test")
-    basic_test()
-    print("Running Many Benchmark")
+    # print("Running Basic Test")
+    # basic_test()
+    # print("Test on a pair of real documents")
+    # real_doc_test()
+    # print("Running Many Benchmark")
     doc_lists = get_drug_data()
     docs = []
     for doc in doc_lists[0]:
         if type(doc) == type('sr') and len(doc) >= shingle_size:
             docs.append(doc)
-    benchmark_minhash(docs, 100)
+    # benchmark_minhash(docs, 100)
+    print("Finding pairs")
+    find_pairs(docs[:400], 100, [0.05, 0.1, 0.2, 0.3, 0.4, 0.5])
