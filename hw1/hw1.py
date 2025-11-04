@@ -130,9 +130,16 @@ def fastminindexmany(doc_list, permutations):
     end = time.perf_counter()
     print(f"Fast Min Hash Index Time ms: {(end - start)} on {len(doc_list)} documents")
 
+def hash_many_basic(many):
+    a = 762
+    b = 984747
+    prime = 2147483647 # larget 32 bit prime
+    return sum(a*x + b for x in many) % prime
+
 def find_pairs(doc_list, permutations, min_thresholds): 
     sig_matrix = fastminmany(doc_list, permutations)
     sims = []
+    start = time.perf_counter()
     for threshold in min_thresholds:
         count = 0
         sim_pair = None
@@ -146,8 +153,41 @@ def find_pairs(doc_list, permutations, min_thresholds):
         if count > 0:
             sims.append((count, sim_pair[0], sim_pair[1]))
         else: sims.append((count, "", ""))
+    run_time = time.perf_counter() - start
     for sim in sims:
         print(f"Similar Count: {sim[0]}\n Doc 1: {sim[1]} \n Doc 2: {sim[2]}")
+    print(f"Similar Find time (s): {run_time}")
+
+def find_pairs_lsh(doc_list, permutations, min_thresholds):
+    sig_matrix = fastminmany(doc_list, permutations)
+    sims = []
+    start = time.perf_counter()
+    pairs = []
+    for threshold in min_thresholds:
+        pairs.append(lsh_pairs(sig_matrix, 5, threshold))
+    run_time = time.perf_counter() - start
+    for i, threshold in enumerate(min_thresholds):
+        print(f"At threshold: {threshold} found {len(pairs[i])}")
+
+def lsh_pairs(sig_matrix, band_size, threshold):
+    buckets = {} # dict to store the values the bands hash to
+    # rows are docs, columns are shingles
+    for r in range(sig_matrix.shape[0]):
+        for c in range(0, sig_matrix.shape[1], band_size):
+            vals = sig_matrix[r, c:c+band_size] if c+band_size < sig_matrix.shape[1] else sig_matrix[r, c:]
+            hash = hash_many_basic(vals)
+            if hash in buckets.keys():
+                buckets[hash].append(r)
+            else:
+                buckets[hash] = [r]
+    matches = []
+    for pairs in buckets.values():
+        if len(pairs) > 1:
+            # matching set
+            if jaccard_ndarray(sig_matrix[pairs[0]], sig_matrix[pairs[1]]) > threshold:
+                matches.append(pairs[0], pairs[1])
+    return matches
+
 
 
 """
@@ -203,4 +243,4 @@ if __name__ == "__main__":
             docs.append(doc)
     # benchmark_minhash(docs, 100)
     print("Finding pairs")
-    find_pairs(docs[:400], 100, [0.05, 0.1, 0.2, 0.3, 0.4, 0.5])
+    find_pairs_lsh(docs[:400], 100, [0.05, 0.1, 0.2, 0.3, 0.4, 0.5])
