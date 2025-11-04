@@ -1,11 +1,31 @@
 import numpy as np
 from functools import reduce
+import hashlib
+from math import pow
 
+def generate_hashes(numHashes: int):
+    funcs = []
+    prime = 2147483647 # larget 32 bit prime
+    rng = np.random.default_rng(1234)
+    al = rng.integers(1, np.iinfo(np.uint32).max, size=numHashes, dtype=np.uint32).tolist()
+    bl = rng.integers(0, np.iinfo(np.uint32).max, size=numHashes, dtype=np.uint32).tolist()
+    for a, b in zip(al, bl):
+        def make_hash(a=a, b=b):
+            def h(x):
+                x_u = np.uint32(x)
+                return (a*x_u + b) % prime
+            return h
+        funcs.append(make_hash())
+    return funcs
 
 def shingle(k, doc):
     # currently case-sensitive
     # each hash is 32 bits
     return set([hash(doc[i : i + k]) for i in range(len(doc) - k + 1)])
+
+def shingle_md5(k, doc):
+    encoded = doc.encode()
+    return set([int(hashlib.md5(encoded[i : i+ k]).hexdigest()[:4], 16) for i in range(len(encoded) - k + 1)])
 
 
 def jaccard(shing1, shing2):
@@ -33,6 +53,27 @@ def minhash(times, shingles):
 
     return np.array(sig_matrix)
 
+# should be less accurate I think??? 
+def fastminhash(times, shingles):
+    all_sh = np.unique(np.concatenate(shingles))
+    rows = [np.isin(all_sh, sh_arr) for sh_arr in shingles]
+    # row is document, column is shingle
+    shingle_matrix = np.array(rows)
+    print(shingle_matrix.shape)
+    k = 15 # fix later
+    hashes = generate_hashes(k)
+    # hashes for shingle n are columns, shingles are rows
+    hash_vals = np.array([[hashes[i](all_sh[r]) for i in range(k)] for r in range(all_sh.shape[0])])
+    print(hash_vals)
+    signature_matrix = np.full(shingle_matrix.shape, np.inf)
+    for r in range(shingle_matrix.shape[0]):
+        for c in range(shingle_matrix.shape[1]):
+            if shingle_matrix[r, c]:
+                for i in range(shingle_matrix.shape[1]):
+                        signature_matrix[r, i] = min(signature_matrix[r,i], hash_vals[c, i])
+    return signature_matrix
+        
+
 
 def compare(k, doc1, doc2, perms=100):
     sh1 = shingle(k, doc1)
@@ -43,13 +84,24 @@ def compare(k, doc1, doc2, perms=100):
 
     return float(same) / len(mh)
 
+def jaccard_ndarray(nd1, nd2):
+    assert nd1.shape == nd2.shape
+    match_rows = sum([1 for i in range(nd1.shape[0]) if nd1[i] == nd2[i]])
+    return match_rows/nd1.shape[0]
+   
+
 
 if __name__ == "__main__":
     doc1 = "Hello, World!"
     doc2 = "hello, world!"
     sh1 = shingle(3, doc1)
     sh2 = shingle(3, doc2)
+    sh1_m5 = shingle_md5(3, doc1)
+    sh2_m5 = shingle_md5(3, doc2)
+    signature = fastminhash(10, [list(sh1_m5), list(sh2_m5)]) 
+    print(f"Jaccard Fast Min Hash: {jaccard_ndarray(signature[0], signature[1])}")
 
     print(f"Minhash:\n{minhash(10, [list(sh1), list(sh2)])}")
     print(f"Sim. estimate: {compare(3, doc1, doc2)}")
     print(f"Jaccard: {jaccard(sh1, sh2)}")
+# 
