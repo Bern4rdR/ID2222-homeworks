@@ -1,7 +1,7 @@
 import numpy as np
 from functools import reduce
 import hashlib
-from math import pow
+from math import pow, ceil
 import time
 from get_data import get_drug_data
 
@@ -157,6 +157,7 @@ def find_pairs(doc_list, permutations, min_thresholds):
     for sim in sims:
         print(f"Similar Count: {sim[0]}\n Doc 1: {sim[1]} \n Doc 2: {sim[2]}")
     print(f"Similar Find time (s): {run_time}")
+    return sims
 
 def find_pairs_lsh(doc_list, permutations, min_thresholds):
     sig_matrix = fastminmany(doc_list, permutations)
@@ -164,12 +165,19 @@ def find_pairs_lsh(doc_list, permutations, min_thresholds):
     start = time.perf_counter()
     pairs = []
     for threshold in min_thresholds:
-        pairs.append(lsh_pairs(sig_matrix, 5, threshold))
+        pairs.append(lsh_pairs(sig_matrix, threshold))
     run_time = time.perf_counter() - start
     for i, threshold in enumerate(min_thresholds):
-        print(f"At threshold: {threshold} found {len(pairs[i])}")
+        print(f"\n\n----- At threshold: {threshold} found {len(pairs[i])} pairs -----")
+        if len(pairs[i]):
+            doc1_ind = pairs[i][0][0]
+            doc2_ind = pairs[i][0][1]
+            print(f"Example Pair\nDoc 1:\n{doc_list[doc1_ind]}\n\nDoc 2:\n{doc_list[doc2_ind]}")
+    return pairs
 
-def lsh_pairs(sig_matrix, band_size, threshold):
+def lsh_pairs(sig_matrix, threshold):
+    band_size = threshold_to_band_size(sig_matrix.shape[1], threshold)
+    print(f"Band Size {band_size} at threshold {threshold} on {sig_matrix.shape[1]} unique shingles.")
     buckets = {} # dict to store the values the bands hash to
     # rows are docs, columns are shingles
     for r in range(sig_matrix.shape[0]):
@@ -185,9 +193,18 @@ def lsh_pairs(sig_matrix, band_size, threshold):
         if len(pairs) > 1:
             # matching set
             if jaccard_ndarray(sig_matrix[pairs[0]], sig_matrix[pairs[1]]) > threshold:
-                matches.append(pairs[0], pairs[1])
+                matches.append((pairs[0], pairs[1]))
     return matches
 
+
+def threshold_to_band_size(num_shingles, threshold):
+    # probability of collision = 1 - (1 - t**r)**b
+    # where r is band size in rows, b is number of bands, t is threshold
+    for r in range(2, num_shingles+1):
+        num_bands = ceil(num_shingles/r)
+        p_hit = 1 - (1 - threshold**r)**num_bands
+        if p_hit <= threshold:
+            return r
 
 
 """
@@ -228,19 +245,34 @@ def real_doc_test():
     # print(f"Jaccard Fast Min Index Hash: {jaccard_ndarray(sig_fmhi[0], sig_fmhi[1])}")
     print(f"Jaccard: {jaccard(set(shingles_fmh[0]), set(shingles_fmh[1]))}")
 
-
+def pair_find_benchmark(doc_list, permutations, thresholds):
+    start = time.perf_counter()
+    naive_pairs = find_pairs(doc_list, permutations, thresholds)
+    time_basic = time.perf_counter() - start
+    start_lsh = time.perf_counter()
+    lsh_pairs = find_pairs_lsh(doc_list, permutations, thresholds)
+    time_lsh = time.perf_counter() - start_lsh
+    for i, t in enumerate(thresholds):
+        naive_count = naive_pairs[i][0]
+        lsh_count = len(lsh_pairs[i])
+        print(f"At Threshold {t} Naive found {naive_count} pairs and LSH found {lsh_count} pairs")
+    print(f"Naive Runtime(s): {time_basic}")
+    print(f"LSH Runtime(s): {time_lsh}")
 
 if __name__ == "__main__":
+    thresholds = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
     # print("Running Basic Test")
     # basic_test()
     # print("Test on a pair of real documents")
     # real_doc_test()
-    # print("Running Many Benchmark")
     doc_lists = get_drug_data()
     docs = []
     for doc in doc_lists[0]:
         if type(doc) == type('sr') and len(doc) >= shingle_size:
             docs.append(doc)
+    # print("Running Many Benchmark")
     # benchmark_minhash(docs, 100)
-    print("Finding pairs")
-    find_pairs_lsh(docs[:400], 100, [0.05, 0.1, 0.2, 0.3, 0.4, 0.5])
+    # print("Finding pairs")
+    # find_pairs_lsh(docs[:100], 10000, thresholds)
+    print("Benchmarking pair algos")
+    pair_find_benchmark(docs[:100], 1000, thresholds)
