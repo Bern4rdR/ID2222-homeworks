@@ -190,14 +190,29 @@ def basic_test():
     print(f"Jaccard: {jaccard(sh1, sh2)}")
 
 def real_doc_test():
-    perms = 100000
+    perms = 20000
     doc_lists = get_drug_data()
-    brc = doc_lists[0][0:2]
+    brc = doc_lists[0][2:4]
     shingles_fmh = [list(shingle_md5(shingle_size, doc)) for doc in brc[:2]]
     sig_fmh = fast_minhash(perms, shingles_fmh)
     print(f"Min Hash sim esitmate: {compare(shingle_size, brc[0], brc[1], perms)}")
     print(f"Jaccard Fast Min Hash: {jaccard_ndarray(sig_fmh[0], sig_fmh[1])}")
     print(f"Jaccard: {jaccard(set(shingles_fmh[0]), set(shingles_fmh[1]))}")
+
+def real_doc_test_many():
+    perms = 1000
+    doc_lists = get_drug_data()
+    naive_err = []
+    fmh_err = []
+    for i in range(102):
+        brc = doc_lists[0][i:i+2]
+        shingles_fmh = [list(shingle_md5(shingle_size, doc)) for doc in brc[:2]]
+        sig_fmh = fast_minhash(perms, shingles_fmh)
+        actual = jaccard(set(shingles_fmh[0]), set(shingles_fmh[1]))
+        naive_err.append(abs(compare(shingle_size, brc[0], brc[1], perms) - actual))
+        fmh_err.append(abs(jaccard_ndarray(sig_fmh[0], sig_fmh[1]) - actual))
+    print(f"FMH Mean Err: {sum(fmh_err)/len(fmh_err)}")
+    print(f"Naive Err: {sum(naive_err)/len(naive_err)}")
 
 def pair_find_benchmark(doc_list, permutations, thresholds):
     start = time.perf_counter()
@@ -222,13 +237,26 @@ def pair_find_benchmark(doc_list, permutations, thresholds):
 if __name__ == "__main__":
     thresholds = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
     # basic_test()
-    # real_doc_test()
+    # real_doc_test_many()
     doc_lists = get_drug_data()
     docs = []
     for doc in doc_lists[0]:
         if type(doc) == type('sr') and len(doc) >= shingle_size:
             docs.append(doc)
-    # benchmark_minhash(docs, 100)
-    # find_pairs_lsh(docs[:100], 10000, thresholds)
-    print("Benchmarking pair algos")
-    pair_find_benchmark(docs[:100], 1000, thresholds)
+    # benchmark_minhash(docs, 300)
+    pairs = find_pairs_lsh(docs[:400], 10000, thresholds)
+    lines = []
+    for i, thr in enumerate(thresholds):
+        lines.append(f"----------------- Threshold: {thr*100}% -----------------")
+        for k, pair in enumerate(pairs[i]):
+            if i >= 10:
+                break
+            lines.append("\nDocument A:\n")
+            lines.append(docs[pair[0]])
+            lines.append("\nDocument B:\n")
+            lines.append(docs[pair[1]])
+            lines.append("\n\n")
+    with open("matching_docs.txt", 'w') as f:
+        f.writelines(lines)
+    # print("Benchmarking pair algos")
+    # pair_find_benchmark(docs[:100], 10000, thresholds)
