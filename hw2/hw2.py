@@ -4,11 +4,12 @@ from multiprocessing import Pool, Queue
 from time import perf_counter
 
 _baskets = None
-
+# I forgot implement this but I should have; I have just manually written it a few times - Viv
 def support(baskets):
     pass
 
-
+# I cheated; the min is 0 and max is 999 so I just used an array to count and didn't need this
+# if we used a different dataset we would need this
 def singletons(baskets):
     return {s for basket in baskets for s in basket}
 
@@ -103,8 +104,10 @@ def pipeline(baskets, threshold, max_k_ton):
     # first pass, then n passes
     count_init = [0 for x in range(1000)]
     singletons = [i for i, x in enumerate(fast_count_items(baskets, count_init)) if x/len(baskets) > threshold]
+    print(f"Found {len(singletons)} Singletons with support above threshold: {threshold}.")
     candidate_kton = candidates_singletons(singletons)
     print(f"Candidates sample :: \n {candidate_kton[:10]}\n Total Candidate Pairs: {len(candidate_kton)}")
+    # n passes
     for i in range(2, max_k_ton + 1):
         check_start = perf_counter()
         remaining = [x[1] for x in count_kton_pool(baskets, candidate_kton, 0.005) if x[0]] # setting threshold low to test
