@@ -7,7 +7,7 @@ Bernard Rumar -- [bernardr@kth.se](mailto:bernardr@kth.se)
 Vivienne Curewitz -- [curewitz@kth.se](mailto:curewitz@kth.se)
 
 ## Datasets used
-- [Druglip](https://archive.ics.uci.edu/static/public/461/drug+review+dataset+druglib+com.zip)
+- [Druglib](https://archive.ics.uci.edu/static/public/461/drug+review+dataset+druglib+com.zip)
   - the correct dataset will be automatically downloaded during the first execution of the program
 
 
