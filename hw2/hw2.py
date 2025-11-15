@@ -4,23 +4,22 @@ from multiprocessing import Pool, Queue
 from time import perf_counter
 
 _baskets = None
-# I forgot implement this but I should have; I have just manually written it a few times - Viv
-def support(baskets):
-    pass
 
 # I cheated; the min is 0 and max is 999 so I just used an array to count and didn't need this
 # if we used a different dataset we would need this
 def singletons(baskets):
     return {s for basket in baskets for s in basket}
 
-# I don't think this terminates, but maybe I don't understand it
 def candidate(baskets, k, s, singletons):
+    if k <= 1: return singletons
+
     k_1_tuples = candidate(baskets, k - 1, s, singletons)
     k_tuples = set()
     for t1 in k_1_tuples:
         for t2 in singletons:
-            if t1 != t2:
-                k_tuples.add(tuple(sorted(t1 + t2)))
+            print(f'{type(t1)} {type(t2)} {type(baskets)}')
+            if t1 != t2 and support(set(t1).add(t2), baskets) >= s:
+                k_tuples.add(tuple(sorted(set(t1).union(t2))))
     return k_tuples
 
 # second attempt for k-tons where k > 2
@@ -86,7 +85,7 @@ def ktf(k_args):
 
 def count_kton_pool(baskets: list[set[int]], ktons: list[set[int]], threshold):
     passing_candidates = []
-    with Pool(10, initializer=init_pool, initargs=(baskets,)) as p: #I have 12 logical threads, these should be like 99% the whole time so no need to go past number threads in cpu
+    with Pool(10, initializer=init_pool, initargs=(baskets,)) as p: # no need to go past number threads in cpu
         passing_candidates = p.map(ktf, [(kt, threshold) for kt in ktons])
     # run pool
     return passing_candidates
@@ -118,9 +117,55 @@ def pipeline(baskets, threshold, max_k_ton):
         c_gen_time = perf_counter() - c_gen_start
         print(f"Generated {len(candidate_kton)} in {c_gen_time} s")
 
+    return candidate_kton, singletons
 
-if __name__ == "__main__":
+def pipeline2(baskets, support, max_k_ton):
+    sing = singletons(baskets)
+    cand_kton = candidate(baskets, max_k_ton, support, sing)
+    print(f'Found {len(cand_kton)} {max_k_ton}-tons')
+
+
+def support(itemset: set, baskets: list[set]):
+    occurances = []
+    for basket in baskets:
+        if itemset.issubset(basket):
+            occurances.append(basket)
+    # occurances = [basket for basket in baskets if itemset.issubset(basket)]
+    return occurances
+
+def conf(kton: set, sing: int, s, baskets):
+    supp_not = support(kton, baskets)
+    if len(supp_not) < s: return 0
+    supp_all = support(kton.union({sing}), supp_not) # baskets with an extra element are subsets of ones without
+    return len(supp_all) / len(supp_not) if len(supp_all) >= s else 0
+
+def gen_rules(ktons: list[set], s, c, singletons: list, baskets):
+    print('Generating Rules...')
+    rules = dict()
+    num_rules = 100 * len(singletons) # =============== DEBUG ===============
+    counter = 1 # =============== DEBUG ===============
+    for kton in ktons[:100]:
+        for sing in singletons:
+            print(f'Checking Rule {counter}/{num_rules}', end='\r') # =============== DEBUG ===============
+            counter += 1 # =============== DEBUG ===============
+            if sing in kton: continue
+            if conf(kton, sing, s, baskets) >= c:
+                rules[frozenset(kton)] = sing # freeze set to make it hashable
+    return rules
+
+
+def main():
     # sanity_check(load_baskets())
     baskets = load_baskets()
     count_init = [0 for x in range(1000)]
-    pipeline(baskets=baskets, threshold=0.02, max_k_ton=4) #375 meet this thresh, 70125 candidate pairs for theshold 0.01
+    candidate_ktons, singtons = pipeline(baskets=baskets, threshold=0.02, max_k_ton=4) #375 meet this thresh, 70125 candidate pairs for theshold 0.01
+
+    time_start = perf_counter()
+    rules = gen_rules(candidate_ktons, 5, 0.75, singtons, baskets) # naive: .5+mil rules to check
+    time_end = perf_counter()
+    print(f'\nRules:\t\t{time_end - time_start:.2f}s\n\t{rules}')
+
+    # pipeline2(baskets, 4, 4)
+
+if __name__ == '__main__':
+    main()
