@@ -66,6 +66,40 @@ if __name__ == "__main__":
     pipeline(baskets=baskets, threshold=0.02, max_k_ton=4) #375 meet this thresh, 70125 candidate pairs for theshold 0.01
 ```
 
+### Bonus
+Rules are generated for each of the k-tons found with the A-Priori algorithm described above. The potential rules are checked against a predefined confidence and support threshold. Each k-ton has its support computed against the baskets both with and without an extra item. If the k-ton appears with the extra item enough times and with high enough confidence, it is considered a rule and added to a dictionary of rules.
+
+```python
+def gen_rules(ktons: list[set], s, c, singletons: list, baskets):
+    print("Generating Rules...")
+    rules = dict()
+
+    num_rules = len(ktons) * len(singletons)  # estimate
+    counter = 1
+    for kton in ktons:
+        supp_tot = support(kton, baskets)
+        if len(supp_tot) < s:
+            continue
+
+        for sing in singletons:
+            print(f"Checking Rule {counter}/~{num_rules}", end="\r")
+            counter += 1
+            if sing in kton:
+                continue
+            if conf(kton, sing, s, supp_tot) >= c:
+                rules[frozenset(kton)] = sing  # freeze set to make it hashable
+    return rules
+```
+The code above tries to generate a rule for each k-ton. The function returns a dictionary of rules, accessible by using `rules[k-ton]` to read the predicted next item.
+
+To save on computation, the support for the k-ton with the extra item is only computed on the baskets that have been found to contain the k-ton.
+```python
+def conf(kton: set, sing: int, s, supp_tot):
+    # check how many of those also contain singleton
+    supp_with = support({sing}, supp_tot)
+    return len(supp_with) / len(supp_tot) if len(supp_with) >= s else 0
+```
+
 ## Installation
 We developed in python 3.12. Run "pip install -r requirements.txt".
 
@@ -87,6 +121,15 @@ Passing Candidates: 24, {120, 593, 862, 895} in 26.31630003099417 s
 ```
 
 The above log used a higher support threshold for the singletons to artificially shrink the runtime. There were 155 singletons; which produces 11935 initial candidate pairs - (N**2 - N)/2. 187 pairs pass the support threshold (which is lowered to 0.005 for the rest of the test), and this becomes 28611 candidate 3-tons - N*(S-2) = 187*(155-2), 72 of which are above the support threshold, and this becomes 72*(155-3) = 10944 Candidate 4-tons, of which 24 pass the threshold.
+
+**Bonus**
+```
+Generating Rules...
+Checking Rule 539400/~561720
+Generated 53 Rules in 40.12s
+```
+
+Using the passing candidates, rules are then generated for each of them. The more than half a million potential rules are narrowed down to only 53. The results shown in the log require the support of at least 5 and a confidence of at least 0.1.
 
 ## Benchmarks
 Using 10 processes is faster than using 1.
