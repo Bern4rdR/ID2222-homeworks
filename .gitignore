@@ -1,6 +1,7 @@
 *.pyc
 *.pdf
 *.zip
+*.dat
 datasets/*
 *.tsv
 venv/
