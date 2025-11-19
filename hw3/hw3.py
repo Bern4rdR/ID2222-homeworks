@@ -19,8 +19,10 @@ triangle_est_at_time_t = []
 def count_neighbors(u, v):
     if len(S) == 0:
         return 0
-    u_neigbors = {list(n)[0] if n[0] != u else list(n)[1] for n in S if u in n}
-    v_neighbors = {int(list(n).remove(v)[0]) for n in S if v in n}
+    su = {u}
+    sv = {v}
+    u_neigbors = {(set(n)-su).pop() for n in S if u in n}
+    v_neighbors = {(set(n) - sv).pop() for n in S if v in n}
     return len(u_neigbors.intersection(v_neighbors))
     
 
