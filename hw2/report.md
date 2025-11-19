@@ -132,4 +132,4 @@ Generated 53 Rules in 40.12s
 Using the passing candidates, rules are then generated for each of them. The more than half a million potential rules are narrowed down to only 53. The results shown in the log require the support of at least 5 and a confidence of at least 0.1.
 
 ## Benchmarks
-Using 10 processes is faster than using 1.
+Using 10 processes is faster than using 1. We measure ~27-28 seconds for the initial 2-ton generation wiht 10 processes on a 12 core machine. With a single process we measure roughly ~138 seconds. Essentially this provides about a 5x speedup. 

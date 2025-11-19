@@ -133,7 +133,7 @@ def pipeline(baskets, threshold, max_k_ton):
     for i in range(2, max_k_ton + 1):
         check_start = perf_counter()
         remaining = [
-            x[1] for x in count_kton_pool(baskets, candidate_kton, 0.005) if x[0]
+            x[1] for x in count_kton_pool(baskets, candidate_kton, 0.005) if x[0] # different threshold to save time
         ]  # setting threshold low to test
         pool_time = perf_counter() - check_start
         print(f"Passing Candidates: {len(remaining)}, {remaining[0]} in {pool_time} s")
@@ -168,13 +168,14 @@ def gen_rules(ktons: list[set], s, c, singletons: list, baskets):
     num_rules = len(ktons) * len(singletons)  # =============== DEBUG ===============
     counter = 1  # =============== DEBUG ===============
     for kton in ktons:
+        # check is above support ratio
         supp_tot = support(kton, baskets)
         if len(supp_tot) < s:
             continue
 
         for sing in singletons:
             print(
-                f"Checking Rule {counter}/~{num_rules}", end="\r"
+                f"Checking Rule {counter}/~{num_rules} -- {counter/num_rules*100:.1f}", end="\r" #nice
             )  # =============== DEBUG ===============
             counter += 1  # =============== DEBUG ===============
             if sing in kton:
@@ -182,7 +183,6 @@ def gen_rules(ktons: list[set], s, c, singletons: list, baskets):
             if conf(kton, sing, s, supp_tot) >= c:
                 rules[frozenset(kton)] = sing  # freeze set to make it hashable
     return rules
-
 
 def main():
     # sanity_check(load_baskets())
@@ -197,6 +197,10 @@ def main():
     )  # naive: .5+mil rules to check
     time_end = perf_counter()
     print(f"\nRules:\t\t{time_end - time_start:.2f}s\n\t{rules}")
+    with open("rules.txt", "w") as rfile:
+        for k, v in rules.items():
+            line = f"{",".join([str(f) for f in k])} -> {v}\n"
+            rfile.write(line)
 
     # pipeline2(baskets, 4, 4)
 
