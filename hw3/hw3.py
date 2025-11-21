@@ -2,14 +2,15 @@ from import_data import EdgeStream
 import time
 import random
 import math
-from multiprocessing import Queue, Process
 from collections import defaultdict
-# global t, s, d0, di# = (0, 0, 0 ,0)
 
 class AdjacencyMatrix:
     data: defaultdict
     elem_list: list = []
     num_edges: int
+    remove_time = 0
+    append_time = 0
+    pop_time = 0
     def __init__(self, M):
         self.data = defaultdict(set)
         # self.elem_list = [None for _ in range(M)] not worth the hassle
@@ -28,19 +29,27 @@ class AdjacencyMatrix:
         self.data[v].discard(u)
         self.num_edges -= 1
 
+    def swap(self, index, new):
+        ru, rv = self.elem_list[index]
+        self.data[ru].discard(rv)
+        self.data[rv].discard(ru)
+        u, v = new
+        self.data[u].add(v)
+        self.data[v].add(u)
+        self.elem_list[index] = new
+
+    # too slow, do not use
     def pop(self, index):
+        start = time.perf_counter()
         edge = self.elem_list.pop(index)
         self.remove(edge)
+        self.pop_time += time.perf_counter() - start
         return edge
-                # for i, k in enumerate(self.data.keys()):
-        #     if total_len + len(self.data[k]) > index:
-        #         rem_key = self.data[k].pop()
-        #         self.data[rem_key].discard(k)
-        #         return (k, rem_key)
-        #     else:
-        #         total_len += len(self.data[k])
-        # print("No pop")
         
+    def adjacency_bench(self):
+        print(f"Append Time: {self.append_time}")
+        print(f"Remove Time: {self.remove_time}")
+        print(f"Pop Time: {self.pop_time - self.remove_time}")
             
 
 # edge = (op, (u, v))
@@ -56,14 +65,11 @@ class Triest():
     S: AdjacencyMatrix
     num_edges = 0
     triangle_est_at_time_t = []
-    work_queue = None
-    data_queue = None
     task_count = 0
-    def __init__(self, M):
+    def __init__(self, M, data_url):
+        self.es = EdgeStream(data_url)
         self.M = M 
         self.S = AdjacencyMatrix(M) 
-        work_queue = Queue(10000) #quite big, no kill computer tack
-        data_queue = Queue()
 
     @property
     def num_edges(self):
@@ -72,7 +78,8 @@ class Triest():
     def count_neighbors(self, u, v):
         if self.num_edges == 0:
             return 0
-        return len(self.S.data[u] & self.S.data[v])
+        ne = len(self.S.data[u] & self.S.data[v])
+        return  ne 
         # return len(u_neigbors.intersection(v_neighbors))
         
 
@@ -92,12 +99,6 @@ class Triest():
         return (self.phi/self.k()) * ( s*(s-1)*(s-2) )/( M*(M-1)*(M-2) )
 
 
-    # this function is the vast majority of the time required to run the algo
-    # to parallelize, we have some challenges
-    # count neighbors relies on S, but the main loop will update S (but only when it calls count neighbors)
-    # we could serialize S, and send it to the thread P;
-    # better, S could be kept in shared memory, and P could handle doing the copy
-    # so it saves time in the main thread
     def update_counters(self, elem):
         start = time.perf_counter()
         op, (u, v) = elem
@@ -106,25 +107,22 @@ class Triest():
         self.update_runtime += time.perf_counter() - start
 
     def sample_edge(self, edge):
-        start = time.perf_counter()
         u_end = 0
         if self.d0 + self.di == 0:
             if self.num_edges < self.M:
                 self.S.append(edge)
                 # self.num_edges += 1
             elif random.randint(0, self.t - 1) < self.M:
-                rm_edge = self.S.pop(random.randint(0, self.num_edges - 1))
-                u_start = time.perf_counter()
+                rm_index = random.randint(0, self.num_edges - 1)
+                rm_edge = self.S.elem_list[rm_index]
                 self.update_counters(('-', rm_edge))
-                u_end = time.perf_counter() - u_start
-                self.S.append(edge)
+                self.S.swap(rm_index, edge)
         elif random.randint(0, self.di+self.d0) < self.di:
             self.S.append(edge)
             self.di -= 1
         else:
             self.d0 -= 1  
             return False
-        self.sample_runtime += time.perf_counter() - start - u_end
         return True
 
     def print_debug(self):
@@ -134,8 +132,7 @@ class Triest():
 
 
     def main_loop(self):
-        es = EdgeStream()
-        elem = es.get_next_edge()
+        elem = self.es.get_next_edge()
         total_start = time.perf_counter()
         last_count = 0
         while elem:
@@ -160,21 +157,19 @@ class Triest():
                 elap = time.perf_counter() - total_start
                 ratio = (1 - (self.t/ee))/(self.t/ee)
                 print(f"{self.t/ee*100:0.1f}% ETA: {ratio*elap/60}", end="\r")
-            # if self.t%1000 == 0 and last_count != p(): 
-            #     print_debug()
-            #     last_count = p()
-            #     break
-            # if self.t > 10000000:
-            #     break
-            # get ready for next loop
-            elem = es.get_next_edge()
+            elem = self.es.get_next_edge()
+
         self.print_debug()
         print(f"Total Runtime: {time.perf_counter() - total_start}")
         print(f"Sample Runtime: {self.sample_runtime}")
         print(f"Update Counter Runtime: {self.update_runtime}")
-        print(f"File IO time: {es.runtime}")
+        print(f"File IO time: {self.es.runtime}")
     
 
 if __name__ == "__main__":
-    tr = Triest(1000)
-    tr.main_loop()
+    for url in ['https://snap.stanford.edu/data/web-Google.txt.gz',
+                'https://snap.stanford.edu/data/web-BerkStan.txt.gz',
+                'https://snap.stanford.edu/data/web-NotreDame.txt.gz',
+                'https://snap.stanford.edu/data/web-Stanford.txt.gz']:
+        tr = Triest(6000000, url)
+        tr.main_loop()

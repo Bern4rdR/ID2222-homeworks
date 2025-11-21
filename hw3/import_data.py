@@ -1,22 +1,36 @@
 import gzip
+import os
 import time
-
+import requests
 import hashlib
+from urllib import parse
 
 my_table = dict()
 
-def decompress_data():
-    with open("web_graph.txt", 'wb') as wf:
-        with gzip.open('web-Google.txt.gz', 'rb') as rf:
+def get_file(url, fname):
+    data = requests.get(url).content
+    with open(fname, 'wb') as f:
+        f.write(data)
+    return fname
+
+def decompress_data(fname, write_name):
+    with open(write_name, 'wb') as wf:
+        with gzip.open(fname, 'rb') as rf:
             content = rf.read()
             wf.write(content)
+    return write_name
 
 class EdgeStream:
     file = None
     runtime = 0
 
-    def __init__(self, fname="web_graph.txt"):
-        self.file = open(fname, 'r')
+    def __init__(self, url):
+        fname = parse.urlparse(url).path.split("/")[-1]
+        write_name = ".".join(fname.split(".")[:2])
+        if write_name not in os.listdir():
+            fname = get_file(url, fname)
+            decompress_data(fname, write_name)
+        self.file = open(write_name, 'r')
 
     def get_next_edge(self):
         start = time.perf_counter()
