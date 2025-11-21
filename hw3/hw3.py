@@ -2,25 +2,30 @@ from import_data import EdgeStream
 import time
 import random
 import math
+from multiprocessing import Queue, Process
 # global t, s, d0, di# = (0, 0, 0 ,0)
 
 # edge = (op, (u, v))
 class Triest():
-    COUNTER = {
-        't': 0,
-        's': 0,
-        'd0': 0,
-        'di':0,
-        'phi': 0,
-        'decrements': 0,
-        'sample_runtime': 0,
-        'update_runtime': 0,
-    }
+    t=0
+    s = 0
+    d0 = 0
+    di=0
+    phi= 0
+    decrements= 0
+    sample_runtime= 0
+    update_runtime= 0
     S = []
     M = 1000
     triangle_est_at_time_t = []
-    def __init__(self):
-        M = 1000
+    work_queue = None
+    data_queue = None
+    task_count = 0
+    def __init__(self, M):
+        self.M = M 
+        work_queue = Queue(10000) #quite big, no kill computer tack
+        data_queue = Queue()
+
 
     def count_neighbors(self, u, v):
         if len(self.S) == 0:
@@ -31,7 +36,7 @@ class Triest():
         nv = set()
         # u_neigbors = {(set(n)-su).pop() for n in S if u in n}
         # v_neighbors = {(set(n) - sv).pop() for n in S if v in n}
-        for (a, b) in S:
+        for (a, b) in self.S:
             if a == u:
                 nu.add(b)
             elif b == u:
@@ -48,16 +53,16 @@ class Triest():
         s = self.s
         di = self.di
         d0 = self.d0
-        w = min(M, self.s+self.di+self.d0)
+        w = min(self.M, self.s+self.di+self.d0)
         return 1 - sum([math.comb(s, j)*math.comb(di+d0, w-j) for j in range(3)]) / math.comb(s+di+d0, w)
 
 
     def p(self):
-        if len(S) < 3:
+        if len(self.S) < 3:
             return 0
-
+        M = len(self.S)
         s = self.s
-        return (self.phi/k()) * ( s*(s-1)*(s-2) )/( len(S)*(len(S)-1)*(len(S)-2) )
+        return (self.phi/self.k()) * ( s*(s-1)*(s-2) )/( M*(M-1)*(M-2) )
 
 
     # this function is the vast majority of the time required to run the algo
@@ -69,7 +74,7 @@ class Triest():
     def update_counters(self, elem):
         start = time.perf_counter()
         op, (u, v) = elem
-        sn = count_neighbors(u, v)
+        sn = self.count_neighbors(u, v)
         self.phi += sn if op == "+" else -sn
         self.update_runtime += time.perf_counter() - start
 
@@ -77,16 +82,16 @@ class Triest():
         start = time.perf_counter()
         u_end = 0
         if self.d0 + self.di == 0:
-            if len(S) < M:
-                S.append(edge)
-            elif random.randint(0, self.t - 1) < M:
-                rm_edge = S.pop(random.randint(0, len(S) - 1))
+            if len(self.S) < self.M:
+                self.S.append(edge)
+            elif random.randint(0, self.t - 1) < self.M:
+                rm_edge = self.S.pop(random.randint(0, len(self.S) - 1))
                 u_start = time.perf_counter()
-                update_counters(('-', rm_edge))
+                self.update_counters(('-', rm_edge))
                 u_end = time.perf_counter() - u_start
-                S.append(edge)
+                self.S.append(edge)
         elif random.randint(0, self.di+self.d0) < self.di:
-            S.append(edge)
+            self.S.append(edge)
             self.di -= 1
         else:
             self.d0 -= 1  
@@ -113,7 +118,7 @@ class Triest():
             if op == "+":
                 if self.sample_edge((u, v)):
                     self.update_counters(elem)
-            elif (u, v) in S:
+            elif (u, v) in self.S:
                 print("Did remove")
                 self.update_counters(elem) # assuming op is -
                 self.S.remove((u, v))
@@ -140,5 +145,5 @@ class Triest():
     
 
 if __name__ == "__main__":
-    tr = Triest()
+    tr = Triest(6)
     tr.main_loop()
