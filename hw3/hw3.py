@@ -11,7 +11,7 @@ COUNTER = {
     'decrements': 0
 }
 S = []
-M = 6
+M = 24
 triangle_est_at_time_t = []
 
 # edge = (op, (u, v))
@@ -19,11 +19,23 @@ triangle_est_at_time_t = []
 def count_neighbors(u, v):
     if len(S) == 0:
         return 0
-    su = {u}
-    sv = {v}
-    u_neigbors = {(set(n)-su).pop() for n in S if u in n}
-    v_neighbors = {(set(n) - sv).pop() for n in S if v in n}
-    return len(u_neigbors.intersection(v_neighbors))
+    # su = {u}
+    # sv = {v}
+    nu = set()
+    nv = set()
+    # u_neigbors = {(set(n)-su).pop() for n in S if u in n}
+    # v_neighbors = {(set(n) - sv).pop() for n in S if v in n}
+    for (a, b) in S:
+        if a == u:
+            nu.add(b)
+        elif b == u:
+            nu.add(a)
+        if a == v:
+            nv.add(b)
+        elif b == v:
+            nv.add(a)
+    return len(nu & nv)
+    # return len(u_neigbors.intersection(v_neighbors))
     
 
 def k(): 
@@ -52,9 +64,10 @@ def sample_edge(edge):
     if COUNTER['d0'] + COUNTER['di'] == 0:
         if len(S) < M:
             S.append(edge)
-        elif random.randint(0, COUNTER['t']) < M:
+        elif random.randint(0, COUNTER['t'] - 1) < M:
             rm_edge = S.pop(random.randint(0, len(S) - 1))
             update_counters(('-', rm_edge))
+            S.append(edge)
     elif random.randint(0, COUNTER['di']+COUNTER['d0']) < COUNTER['di']:
         S.append(edge)
         COUNTER['di'] -= 1
@@ -63,9 +76,17 @@ def sample_edge(edge):
         return False
     return True
 
+def print_debug():
+    print(COUNTER)
+    print(f"K: {k()}")
+    print(f"S: {len(S)}")
+    print(f'triangle count {p()}')
+
+
 def main_loop():
     es = EdgeStream()
     elem = es.get_next_edge()
+    last_count = 0
     while elem:
         # start main loop here algo 2, section 4.3 triest
         op, (u, v) = elem 
@@ -80,16 +101,17 @@ def main_loop():
             COUNTER['di'] += 1
         else:
             COUNTER['d0'] += 1
-        if COUNTER['t'] > 1000:
+
+        # if COUNTER['t']%1000 == 0 and last_count != p(): 
+        #     print_debug()
+        #     last_count = p()
+        #     break
+        if COUNTER['t'] > 10000000:
             break
         # get ready for next loop
         elem = es.get_next_edge()
-
-    print(COUNTER)
-    print(f"K: {k()}")
-    print(f"S: {len(S)}")
-    print(f'triangle count {p()}')
-
+    print_debug()
+    
 
 if __name__ == "__main__":
     main_loop()
