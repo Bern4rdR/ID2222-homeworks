@@ -3,7 +3,45 @@ import time
 import random
 import math
 from multiprocessing import Queue, Process
+from collections import defaultdict
 # global t, s, d0, di# = (0, 0, 0 ,0)
+
+class AdjacencyMatrix:
+    data: defaultdict
+    elem_list: list = []
+    num_edges: int
+    def __init__(self, M):
+        self.data = defaultdict(set)
+        # self.elem_list = [None for _ in range(M)] not worth the hassle
+        self.num_edges = 0
+
+    def append(self, edge):
+        u, v = edge
+        self.data[u].add(v)
+        self.data[v].add(u)
+        self.elem_list.append(edge)
+        self.num_edges += 1
+    
+    def remove(self, edge):
+        u, v = edge
+        self.data[u].discard(v)
+        self.data[v].discard(u)
+        self.num_edges -= 1
+
+    def pop(self, index):
+        edge = self.elem_list.pop(index)
+        self.remove(edge)
+        return edge
+                # for i, k in enumerate(self.data.keys()):
+        #     if total_len + len(self.data[k]) > index:
+        #         rem_key = self.data[k].pop()
+        #         self.data[rem_key].discard(k)
+        #         return (k, rem_key)
+        #     else:
+        #         total_len += len(self.data[k])
+        # print("No pop")
+        
+            
 
 # edge = (op, (u, v))
 class Triest():
@@ -15,37 +53,26 @@ class Triest():
     decrements= 0
     sample_runtime= 0
     update_runtime= 0
-    S = []
-    M = 1000
+    S: AdjacencyMatrix
+    num_edges = 0
     triangle_est_at_time_t = []
     work_queue = None
     data_queue = None
     task_count = 0
     def __init__(self, M):
         self.M = M 
+        self.S = AdjacencyMatrix(M) 
         work_queue = Queue(10000) #quite big, no kill computer tack
         data_queue = Queue()
 
+    @property
+    def num_edges(self):
+        return self.S.num_edges
 
     def count_neighbors(self, u, v):
-        if len(self.S) == 0:
+        if self.num_edges == 0:
             return 0
-        # su = {u}
-        # sv = {v}
-        nu = set()
-        nv = set()
-        # u_neigbors = {(set(n)-su).pop() for n in S if u in n}
-        # v_neighbors = {(set(n) - sv).pop() for n in S if v in n}
-        for (a, b) in self.S:
-            if a == u:
-                nu.add(b)
-            elif b == u:
-                nu.add(a)
-            if a == v:
-                nv.add(b)
-            elif b == v:
-                nv.add(a)
-        return len(nu & nv)
+        return len(self.S.data[u] & self.S.data[v])
         # return len(u_neigbors.intersection(v_neighbors))
         
 
@@ -58,9 +85,9 @@ class Triest():
 
 
     def p(self):
-        if len(self.S) < 3:
+        if self.num_edges < 3:
             return 0
-        M = len(self.S)
+        M = self.num_edges
         s = self.s
         return (self.phi/self.k()) * ( s*(s-1)*(s-2) )/( M*(M-1)*(M-2) )
 
@@ -82,10 +109,11 @@ class Triest():
         start = time.perf_counter()
         u_end = 0
         if self.d0 + self.di == 0:
-            if len(self.S) < self.M:
+            if self.num_edges < self.M:
                 self.S.append(edge)
+                # self.num_edges += 1
             elif random.randint(0, self.t - 1) < self.M:
-                rm_edge = self.S.pop(random.randint(0, len(self.S) - 1))
+                rm_edge = self.S.pop(random.randint(0, self.num_edges - 1))
                 u_start = time.perf_counter()
                 self.update_counters(('-', rm_edge))
                 u_end = time.perf_counter() - u_start
@@ -101,7 +129,7 @@ class Triest():
 
     def print_debug(self):
         print(f"K: {self.k()}")
-        print(f"S: {len(self.S)}")
+        print(f"S: {self.num_edges}")
         print(f'triangle count {self.p()}')
 
 
@@ -128,7 +156,10 @@ class Triest():
                 self.d0 += 1
 
             if self.t%5000 == 0:
-                print(f"{self.t/50000:0.1f}%", end="\r")
+                ee = 5000000
+                elap = time.perf_counter() - total_start
+                ratio = (1 - (self.t/ee))/(self.t/ee)
+                print(f"{self.t/ee*100:0.1f}% ETA: {ratio*elap/60}", end="\r")
             # if self.t%1000 == 0 and last_count != p(): 
             #     print_debug()
             #     last_count = p()
@@ -145,5 +176,5 @@ class Triest():
     
 
 if __name__ == "__main__":
-    tr = Triest(6)
+    tr = Triest(1000)
     tr.main_loop()
