@@ -4,6 +4,8 @@ import time
 import requests
 import hashlib
 from urllib import parse
+import mmh3
+from bitarray import bitarray
 
 my_table = dict()
 
@@ -20,11 +22,31 @@ def decompress_data(fname, write_name):
             wf.write(content)
     return write_name
 
+class BloomFilter:
+    def __init__(self, size=10_000_000, hash_count=5):
+        self.size = size
+        self.hash_count = hash_count
+        self.bit_array = bitarray(size)
+        self.bit_array.setall(0)
+
+    def _hashes(self, item):
+        for i in range(self.hash_count):
+            yield mmh3.hash(str(item), i) % self.size
+
+    def add(self, item):
+        for h in self._hashes(item):
+            self.bit_array[h] = True
+
+    def __contains__(self, item):
+        return all(self.bit_array[h] for h in self._hashes(item))
+
 class EdgeStream:
     file = None
     runtime = 0
+    bloom: BloomFilter
 
     def __init__(self, url):
+        self.bloom = BloomFilter()
         fname = parse.urlparse(url).path.split("/")[-1]
         write_name = ".".join(fname.split(".")[:2])
         if write_name not in os.listdir():
@@ -42,7 +64,14 @@ class EdgeStream:
         nasta = nasta.strip().split("\t")
         retval = None
         try:
-            retval =  ('+', (int(nasta[0]), int(nasta[1]))) 
+            uv = (int(nasta[0]), int(nasta[1]))
+            u, v = uv
+            u, v = (u, v) if u <= v else (v, u) 
+            if (u , v) in self.bloom:
+                print("Repeat edge found")
+                retval = self.get_next_edge()
+            else:
+                retval = ('+', (u, v))
         except:
             retval =  False
         self.runtime += time.perf_counter() - start

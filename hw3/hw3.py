@@ -6,12 +6,13 @@ from collections import defaultdict
 
 class AdjacencyMatrix:
     data: defaultdict
-    elem_list: list = []
+    elem_list: list
     num_edges: int
     remove_time = 0
     append_time = 0
     pop_time = 0
     def __init__(self, M):
+        self.elem_list = []
         self.data = defaultdict(set)
         # self.elem_list = [None for _ in range(M)] not worth the hassle
         self.num_edges = 0
@@ -141,9 +142,13 @@ class Triest():
             self.t += 1
             self.s += 1 if op == "+" else -1
             if op == "+":
+                # if true, we call update counter
+                # it is true when we add a new edge
+                # we only update the counter when we remove before adding
                 if self.sample_edge((u, v)):
                     self.update_counters(elem)
             elif (u, v) in self.S:
+                # this never gets called
                 print("Did remove")
                 self.update_counters(elem) # assuming op is -
                 self.S.remove((u, v))
@@ -167,9 +172,15 @@ class Triest():
     
 
 if __name__ == "__main__":
-    for url in ['https://snap.stanford.edu/data/web-Google.txt.gz',
-                'https://snap.stanford.edu/data/web-BerkStan.txt.gz',
-                'https://snap.stanford.edu/data/web-NotreDame.txt.gz',
-                'https://snap.stanford.edu/data/web-Stanford.txt.gz']:
+    def do_all():
+        for url in ['https://snap.stanford.edu/data/web-Google.txt.gz',
+                    'https://snap.stanford.edu/data/web-BerkStan.txt.gz',
+                    'https://snap.stanford.edu/data/web-NotreDame.txt.gz',
+                    'https://snap.stanford.edu/data/web-Stanford.txt.gz']:
+            tr = Triest(6000000, url)
+            tr.main_loop()
+    def do_google():
+        url = 'https://snap.stanford.edu/data/web-Google.txt.gz'
         tr = Triest(6000000, url)
         tr.main_loop()
+    do_google()
