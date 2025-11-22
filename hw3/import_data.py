@@ -1,26 +1,30 @@
 import gzip
+import hashlib
 import os
 import time
-import requests
-import hashlib
 from urllib import parse
+
 import mmh3
+import requests
 from bitarray import bitarray
 
 my_table = dict()
 
+
 def get_file(url, fname):
     data = requests.get(url).content
-    with open(fname, 'wb') as f:
+    with open(fname, "wb") as f:
         f.write(data)
     return fname
 
+
 def decompress_data(fname, write_name):
-    with open(write_name, 'wb') as wf:
-        with gzip.open(fname, 'rb') as rf:
+    with open(write_name, "wb") as wf:
+        with gzip.open(fname, "rb") as rf:
             content = rf.read()
             wf.write(content)
     return write_name
+
 
 class BloomFilter:
     def __init__(self, size=10_000_000, hash_count=5):
@@ -40,6 +44,7 @@ class BloomFilter:
     def __contains__(self, item):
         return all(self.bit_array[h] for h in self._hashes(item))
 
+
 class EdgeStream:
     file = None
     runtime = 0
@@ -52,7 +57,7 @@ class EdgeStream:
         if write_name not in os.listdir():
             fname = get_file(url, fname)
             decompress_data(fname, write_name)
-        self.file = open(write_name, 'r')
+        self.file = open(write_name, "r")
 
     def get_next_edge(self):
         start = time.perf_counter()
@@ -64,24 +69,25 @@ class EdgeStream:
         nasta = nasta.strip().split("\t")
         retval = None
         try:
-            uv = (int(nasta[0]), int(nasta[1]))
-            u, v = uv
-            u, v = (u, v) if u <= v else (v, u) 
-            if (u , v) in self.bloom:
-                print("Repeat edge found")
+            u, v = int(nasta[0]), int(nasta[1])
+            u, v = (u, v) if u <= v else (v, u)
+            if (u, v) in self.bloom:
+                # Duplicate edge found, skip it by getting next edge
                 retval = self.get_next_edge()
             else:
-                retval = ('+', (u, v))
+                # Add edge to Bloom filter to detect future duplicates
+                retval = ("+", (u, v))
         except:
-            retval =  False
+            retval = False
         self.runtime += time.perf_counter() - start
         return retval
 
     def get_next_line_bytes(self):
-        return bytes(self.file.readline(), 'utf-8')
+        return bytes(self.file.readline(), "utf-8")
+
 
 if __name__ == "__main__":
     es = EdgeStream()
     for i in range(10):
-        edge = es.get_next_edge() 
+        edge = es.get_next_edge()
         print(edge)
