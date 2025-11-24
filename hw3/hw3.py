@@ -20,6 +20,10 @@ class AdjacencyMatrix:
         # self.elem_list = [None for _ in range(M)] not worth the hassle
         self.num_edges = 0
 
+    def __contains__(self, edge):
+        u, v = edge
+        return v in self.data[u] and u in self.data[v]
+
     def append(self, edge):
         u, v = edge
         self.data[u].add(v)
@@ -205,7 +209,7 @@ if __name__ == "__main__":
     def do_nutella():
         # url = "https://snap.stanford.edu/data/p2p-Gnutella31.txt.gz"
         url = "https://snap.stanford.edu/data/p2p-Gnutella06.txt.gz"
-        tr = Triest(25000, url)
+        tr = Triest(35000, url)
         tr.main_loop()
 
     def do_facebook(M):
@@ -216,7 +220,7 @@ if __name__ == "__main__":
 
     # for M in [6_000_000]:
         # do_google(M)
-    # do_nutella()
-    for i in ([100_000, 80_000, 60_000, 40_000, 20_000, 10_000]):
-        do_facebook(i)
+    do_nutella()
+    # for i in ([100_000, 80_000, 60_000, 40_000, 20_000, 10_000]):
+        # do_facebook(i)
     # do_all()
