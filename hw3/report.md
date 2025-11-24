@@ -187,32 +187,57 @@ Total Runtime:  146.83s
 Sample Runtime: 0.00s
 Update Counter Runtime: 16.75s
 ## Benchmarks
-On 1.000.000 size M, we run in 146s, which means we can do 35.000 edges per second. We get accuracy with 10% of actual triangles with 1.000.000 size M, and 100% when max M exceeds the edge count. 
-
-rocessing:     102.1% ETA: -2s
-K: 1.0          phi: 25321
-S: 600000
-Edge Count:     5,105,039
-Triangle Count: 15,596,466
-Total Runtime:  115.40s   
+Processing:     1.7% ETA: 49s
+K: 1.0          phi: 1612010
+S: 88234
+Edge Count:     88,234
+Triangle Count: 1,612,010
+Total Runtime:  0.88s   
 Sample Runtime: 0.00s
-Update Counter Runtime: 16.66s
-File IO time:   31.67s
-Processing:     102.1% ETA: -2s
-K: 1.0          phi: 319
+Update Counter Runtime: 0.26s
+File IO time:   0.42s
+Processing:     1.7% ETA: 53s
+K: 1.0          phi: 1183819
+S: 80000
+Edge Count:     88,234
+Triangle Count: 1,588,271
+Total Runtime:  1.02s   
+Sample Runtime: 0.00s
+Update Counter Runtime: 0.33s
+File IO time:   0.41s
+Processing:     1.7% ETA: 71s
+K: 1.0          phi: 457834
 S: 60000
-Edge Count:     5,105,039
-Triangle Count: 196,496,846
-Total Runtime:  88.60s   
+Edge Count:     88,234
+Triangle Count: 1,456,026
+Total Runtime:  1.53s   
 Sample Runtime: 0.00s
-Update Counter Runtime: 16.68s
-File IO time:   31.84s
-Processing:     102.1% ETA: -2s
-K: 1.0          phi: 5
-S: 6000
-Edge Count:     5,105,039
-Triangle Count: 3,081,274,345
-Total Runtime:  85.33s   
+Update Counter Runtime: 0.48s
+File IO time:   0.45s
+Processing:     1.7% ETA: 82s
+K: 1.0          phi: 165896
+S: 40000
+Edge Count:     88,234
+Triangle Count: 1,780,662
+Total Runtime:  1.78s   
 Sample Runtime: 0.00s
-Update Counter Runtime: 14.84s
-File IO time:   31.27s
+Update Counter Runtime: 0.53s
+File IO time:   0.46s
+Processing:     1.7% ETA: 91s
+K: 1.0          phi: 46935
+S: 20000
+Edge Count:     88,234
+Triangle Count: 4,030,557
+Total Runtime:  1.74s   
+Sample Runtime: 0.00s
+Update Counter Runtime: 0.51s
+File IO time:   0.50s
+Processing:     1.7% ETA: 88s
+K: 1.0          phi: 16133
+S: 10000
+Edge Count:     88,234
+Triangle Count: 11,085,073
+Total Runtime:  1.62s   
+Sample Runtime: 0.00s
+Update Counter Runtime: 0.44s
+File IO time:   0.49s

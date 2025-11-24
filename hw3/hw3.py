@@ -217,5 +217,6 @@ if __name__ == "__main__":
     # for M in [6_000_000]:
         # do_google(M)
     # do_nutella()
-    do_facebook(40_000)
+    for i in ([100_000, 80_000, 60_000, 40_000, 20_000, 10_000]):
+        do_facebook(i)
     # do_all()
