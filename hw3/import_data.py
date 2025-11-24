@@ -66,7 +66,7 @@ class EdgeStream:
             return False
         while nasta[0] == "#":
             nasta = self.file.readline()
-        nasta = nasta.strip().split("\t")
+        nasta = nasta.strip().split()
         retval = None
         try:
             u, v = int(nasta[0]), int(nasta[1])

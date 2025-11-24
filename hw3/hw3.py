@@ -156,7 +156,6 @@ class Triest:
                 if self.sample_edge((u, v)):
                     self.update_counters(elem)
             elif (u, v) in self.S:
-                # this never gets called
                 print("Did remove")
                 self.update_counters(elem)  # assuming op is -
                 self.S.remove((u, v))
@@ -198,10 +197,25 @@ if __name__ == "__main__":
             print("#" * (16 + len(tr.name)) + "\033[0m")
             tr.main_loop()
 
-    def do_google():
+    def do_google(M):
         url = "https://snap.stanford.edu/data/web-Google.txt.gz"
-        tr = Triest(1_000_000, url)
+        tr = Triest(M, url)
         tr.main_loop()
 
-    do_google()
+    def do_nutella():
+        # url = "https://snap.stanford.edu/data/p2p-Gnutella31.txt.gz"
+        url = "https://snap.stanford.edu/data/p2p-Gnutella06.txt.gz"
+        tr = Triest(25000, url)
+        tr.main_loop()
+
+    def do_facebook(M):
+        # url = "https://snap.stanford.edu/data/p2p-Gnutella31.txt.gz"
+        url = "https://snap.stanford.edu/data/facebook_combined.txt.gz"
+        tr = Triest(M, url)
+        tr.main_loop()
+
+    # for M in [6_000_000]:
+        # do_google(M)
+    # do_nutella()
+    do_facebook(40_000)
     # do_all()
