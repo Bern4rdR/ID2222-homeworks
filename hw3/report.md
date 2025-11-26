@@ -1,4 +1,4 @@
-# Homework 2
+# Homework 3
 November 10 or whatever
 
 ### Authors
