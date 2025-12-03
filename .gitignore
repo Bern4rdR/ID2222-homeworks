@@ -5,3 +5,5 @@
 datasets/*
 *.tsv
 venv/
+*.class
+*.png

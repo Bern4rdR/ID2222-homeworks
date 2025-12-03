@@ -1,0 +1,10 @@
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/io/FileIO.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/Jabeja.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/Main.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/config/Config.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/io/CLI.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/io/GraphReader.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/rand/RandNoGenerator.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/config/NodeSelectionPolicy.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/config/GraphInitColorPolicy.java
+/home/bernardr/kth/data-mining/src/main/java/se/kth/jabeja/Node.java
