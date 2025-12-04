@@ -13,6 +13,20 @@ public class Config {
   private GraphInitColorPolicy initColorPolicy;
   private NodeSelectionPolicy nodeSelectionPolicy;
   private Float alpha;
+  // vivienne added
+  private String annealingPolicy;
+  private String tempPolicy;
+
+  // viv
+  public Config setAnnealingPolicy(String ap) {
+    this.annealingPolicy = ap;
+    return this;
+  }
+
+  public Config setTempPolicy(String tp) {
+    this.tempPolicy = tp;
+    return this;
+  }
 
   public Config setAlpha(Float alpha) {
     this.alpha = alpha;
@@ -150,6 +164,20 @@ public class Config {
     }
     return outputDir;
 
+  }
+  // viv  
+  public String getAnnealingPolicy() {
+    if (annealingPolicy == null) {
+      return "default";
+    }
+    return annealingPolicy;
+  }
+
+  public String getTempPolicy() {
+    if (tempPolicy == null) {
+      return "default";
+    }
+    return tempPolicy;
   }
 
   public Float getAlpha() {

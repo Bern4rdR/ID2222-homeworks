@@ -21,6 +21,7 @@ public class Jabeja {
   private float T;
   private boolean resultFileCreated = false;
   private float alpha;
+  private float delta;
 
   //-------------------------------------------------------------------
   public Jabeja(HashMap<Integer, Node> graph, Config config) {
@@ -31,6 +32,7 @@ public class Jabeja {
     this.config = config;
     this.T = config.getTemperature();
     this.alpha = config.getAlpha();
+    this.delta = config.getDelta();
   }
 
 
@@ -52,17 +54,25 @@ public class Jabeja {
    * Simulated analealing cooling function
    */
   private void saCoolDown(){
-    // TODO for second task
-    if (T > 1)
-      T = T - this.alpha;
-    if (T < 1)
-      T = 1;
+    if (config.getTempPolicy().equals("default")) {
+      if (T > 1)
+        T = T - this.delta;
+      if (T < 1)
+        T = 1;
+    } else if (config.getTempPolicy().equals("log")) {
+      T = T * (1 - this.delta); // approaches 0
+    }
+    
   }
 
-  private boolean acceptanceProbabilty(float old_util, float new_util) {
-    float delta_ratio = (new_util - old_util)/this.T;
+  private boolean acceptanceProbabilty(double old_util, double new_util) {
+    double delta_ratio = (new_util - old_util)/this.T;
     double acceptance_probability = Math.exp(delta_ratio);
     return Math.random() < acceptance_probability;
+  }
+
+  private boolean shouldSwap(float oldBen, float newBen, float highestUtil) {
+    return false;
   }
 
   /**
@@ -72,33 +82,36 @@ public class Jabeja {
   private void sampleAndSwap(int nodeId) {
     Node partner = null;
     Node nodep = entireGraph.get(nodeId);
+    Node plocal = null;
+    Node prandom = null;
 
+    // this was really slow so I updated it; Also, I noticed that it was always selecting the random partner 
+    // I verified with assertions (which break the program when it is runnnig)
+    // so that is why this is different
     if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
             || config.getNodeSelectionPolicy() == NodeSelectionPolicy.LOCAL) {
       // swap with random neighbors
-      // TODO
       partner = findPartner(nodeId, nodep.getNeighbours().toArray(new Integer[0]));
-      if (partner == null) {
-        int sampleSize = 15; // arbitrary value
-        ArrayList<Integer> nodeSamples = new ArrayList<>(entireGraph.keySet()); // currently entire graph
-        Collections.shuffle(nodeSamples); // randomize order (then take a slice from it)
-        partner = findPartner(nodeId, nodeSamples.subList(0, Math.min(sampleSize, nodeSamples.size())).toArray(new Integer[0]));
-      }
+      plocal = partner;
     }
-
-    if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
+    if ((config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID && partner == null)
             || config.getNodeSelectionPolicy() == NodeSelectionPolicy.RANDOM) {
       // if local policy fails then randomly sample the entire graph
-      // TODO
       int sampleSize = 15; // arbitrary value
-      ArrayList<Integer> nodeSamples = new ArrayList<>(entireGraph.keySet()); // currently entire graph
-      Collections.shuffle(nodeSamples); // randomize order (then take a slice from it)
-      partner = findPartner(nodeId, nodeSamples.subList(0, Math.min(sampleSize, nodeSamples.size())).toArray(new Integer[0]));
+      Integer[] nodeSamples = new Integer[sampleSize];
+      for(int i = 0; i < sampleSize; i++) {
+        int index = (int) Math.floor(Math.random()*this.nodeIds.size());
+        nodeSamples[i] = this.nodeIds.get(index);
+      }
+      partner = findPartner(nodeId, nodeSamples);
+      prandom = partner;
     }
 
     // swap the colors
-    // TODO
     if (partner != null) {
+      // if (prandom != plocal) {
+        // assert(partner != plocal);
+      // }
       int pColor = nodep.getColor();
       nodep.setColor(partner.getColor());
       partner.setColor(pColor);
@@ -111,7 +124,7 @@ public class Jabeja {
     Node nodep = entireGraph.get(nodeId);
 
     Node bestPartner = null;
-    double highestBenefit = 0;
+    double highestUtil = 0; //sorry my old boss was named Ben and this was weirding me out.
 
     // TODO
     for (int qId : nodes) {
@@ -125,10 +138,24 @@ public class Jabeja {
       int degqp = (int) nodeq.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodep.getColor()).count();
       int newBen = degpq + degqp;
 
-      if (this.acceptanceProbabilty(oldBen, newBen)) {
-        bestPartner = nodeq;
-        highestBenefit = newBen; // not used??
+      // the paper's annealing functions -- @Bernard lmk if you think this is incorrect
+      // logger.info("Annealing Policy: " + config.getAnnealingPolicy());
+      assert(config.getAnnealingPolicy().equals("default") || config.getAnnealingPolicy().equals("exp"));
+      if (config.getAnnealingPolicy().equals("default")) {
+        double util = (Math.pow(degpq, this.alpha) + Math.pow(degqp, this.alpha)) * this.T - (Math.pow(degpp, this.alpha) + Math.pow(degqq, this.alpha));
+        if (util > highestUtil) {
+          bestPartner = nodeq;
+          highestUtil = util; 
+        }
+      } else if (config.getAnnealingPolicy().equals("exp")) {
+        // no multiply by T here
+        double util = (Math.pow(degpq, this.alpha) + Math.pow(degqp, this.alpha)) - (Math.pow(degpp, this.alpha) + Math.pow(degqq, this.alpha));
+        if (acceptanceProbabilty(highestUtil, util)) {
+          bestPartner = nodeq;
+          highestUtil = util;
+        }
       }
+      
       
     }
     return bestPartner;

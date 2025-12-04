@@ -27,7 +27,7 @@ set xlabel "Rounds"
 plot filename using 1:4 with l ls 3 title "Migrations"
 set ylabel "Temperature" 
 set xlabel "Rounds" 
-plot filename using 1:5 with l ls 3 title "Migrations"
+plot filename using 1:5 with l ls 3 title "Temperature"
 
 unset multiplot
 
