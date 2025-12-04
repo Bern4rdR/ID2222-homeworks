@@ -20,6 +20,7 @@ public class Jabeja {
   private int round;
   private float T;
   private boolean resultFileCreated = false;
+  private float alpha;
 
   //-------------------------------------------------------------------
   public Jabeja(HashMap<Integer, Node> graph, Config config) {
@@ -29,6 +30,7 @@ public class Jabeja {
     this.numberOfSwaps = 0;
     this.config = config;
     this.T = config.getTemperature();
+    this.alpha = config.getAlpha();
   }
 
 
@@ -52,9 +54,15 @@ public class Jabeja {
   private void saCoolDown(){
     // TODO for second task
     if (T > 1)
-      T -= config.getDelta();
+      T = T - this.alpha;
     if (T < 1)
       T = 1;
+  }
+
+  private boolean acceptanceProbabilty(float old_util, float new_util) {
+    float delta_ratio = (new_util - old_util)/this.T;
+    double acceptance_probability = Math.exp(delta_ratio);
+    return Math.random() < acceptance_probability;
   }
 
   /**
@@ -117,12 +125,12 @@ public class Jabeja {
       int degqp = (int) nodeq.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodep.getColor()).count();
       int newBen = degpq + degqp;
 
-      if (newBen > oldBen && newBen > highestBenefit) {
+      if (this.acceptanceProbabilty(oldBen, newBen)) {
         bestPartner = nodeq;
-        highestBenefit = newBen;
+        highestBenefit = newBen; // not used??
       }
+      
     }
-
     return bestPartner;
   }
 
@@ -272,11 +280,11 @@ public class Jabeja {
       }
       // create folder and result file with header
       String header = "# Migration is number of nodes that have changed color.";
-      header += "\n\nRound" + delimiter + "Edge-Cut" + delimiter + "Swaps" + delimiter + "Migrations" + delimiter + "Skipped" + "\n";
+      header += "\n\nRound" + delimiter + "Edge-Cut" + delimiter + "Swaps" + delimiter + "Migrations" + delimiter + "Skipped" + delimiter + "Temperature" + "\n";
       FileIO.write(header, outputFilePath);
       resultFileCreated = true;
     }
 
-    FileIO.append(round + delimiter + (edgeCuts) + delimiter + numberOfSwaps + delimiter + migrations + "\n", outputFilePath);
+    FileIO.append(round + delimiter + (edgeCuts) + delimiter + numberOfSwaps + delimiter + migrations + delimiter + T + "\n", outputFilePath);
   }
 }
