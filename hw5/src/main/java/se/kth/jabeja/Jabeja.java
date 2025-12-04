@@ -61,6 +61,9 @@ public class Jabeja {
         T = 1;
     } else if (config.getTempPolicy().equals("log")) {
       T = T * (1 - this.delta); // approaches 0
+      if (T < 1) {
+        T = 1;
+      }
     }
     
   }
