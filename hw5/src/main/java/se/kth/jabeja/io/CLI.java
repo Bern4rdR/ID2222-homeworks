@@ -63,6 +63,9 @@ public class CLI {
   @Option(name = "-tp", usage = "Temp Policy - default or log")
   private String TEMP_POLICY = "default";
 
+  @Option(name = "-fn", usage = "file name")
+  private String FN = null;
+
 
   public Config parseArgs(String[] args) throws FileNotFoundException {
     CmdLineParser parser = new CmdLineParser(this);
@@ -119,6 +122,7 @@ public class CLI {
             .setOutputDir(OUTPUT_DIR)
             .setAlpha(ALPHA)
             .setAnnealingPolicy(ANNEALING_POLICY)
-            .setTempPolicy(TEMP_POLICY);
+            .setTempPolicy(TEMP_POLICY)
+            .setFileName(FN);
   }
 }

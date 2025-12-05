@@ -16,6 +16,7 @@ public class Config {
   // vivienne added
   private String annealingPolicy;
   private String tempPolicy;
+  private String fileName = null;
 
   // viv
   public Config setAnnealingPolicy(String ap) {
@@ -25,6 +26,11 @@ public class Config {
 
   public Config setTempPolicy(String tp) {
     this.tempPolicy = tp;
+    return this;
+  }
+
+  public Config setFileName(String fn) {
+    this.fileName = fn;
     return this;
   }
 
@@ -178,6 +184,10 @@ public class Config {
       return "default";
     }
     return tempPolicy;
+  }
+
+  public String getFilename() {
+    return fileName;
   }
 
   public Float getAlpha() {

@@ -47,6 +47,9 @@ public class Jabeja {
       //reduce the temperature
       saCoolDown();
       report();
+      if (round % 500 == 0) {
+        T = config.getTemperature();
+      }
     }
   }
 
@@ -61,9 +64,6 @@ public class Jabeja {
         T = 1;
     } else if (config.getTempPolicy().equals("log")) {
       T = T * (1 - this.delta); // approaches 0
-      if (T < 1) {
-        T = 1;
-      }
     }
     
   }
@@ -135,11 +135,9 @@ public class Jabeja {
 
       int degpp = (int) nodep.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodep.getColor()).count();
       int degqq = (int) nodeq.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodeq.getColor()).count();
-      int oldBen = degpp + degqq;
 
       int degpq = (int) nodep.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodeq.getColor()).count();
       int degqp = (int) nodeq.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodep.getColor()).count();
-      int newBen = degpq + degqp;
 
       // the paper's annealing functions -- @Bernard lmk if you think this is incorrect
       // logger.info("Annealing Policy: " + config.getAnnealingPolicy());
@@ -152,10 +150,11 @@ public class Jabeja {
         }
       } else if (config.getAnnealingPolicy().equals("exp")) {
         // no multiply by T here
-        double util = (Math.pow(degpq, this.alpha) + Math.pow(degqp, this.alpha)) - (Math.pow(degpp, this.alpha) + Math.pow(degqq, this.alpha));
-        if (acceptanceProbabilty(highestUtil, util)) {
+        double next_util = Math.pow(degpq, this.alpha) + Math.pow(degqp, this.alpha);
+        double current_util = Math.pow(degpp, this.alpha) + Math.pow(degqq, this.alpha);
+        if (acceptanceProbabilty(Math.max(current_util, highestUtil), next_util)) {
           bestPartner = nodeq;
-          highestUtil = util;
+          highestUtil = next_util;
         }
       }
       
@@ -289,18 +288,21 @@ public class Jabeja {
 
     //output file name
     File inputFile = new File(config.getGraphFilePath());
-    outputFilePath = config.getOutputDir() +
-            File.separator +
-            inputFile.getName() + "_" +
-            "NS" + "_" + config.getNodeSelectionPolicy() + "_" +
-            "GICP" + "_" + config.getGraphInitialColorPolicy() + "_" +
-            "T" + "_" + config.getTemperature() + "_" +
-            "D" + "_" + config.getDelta() + "_" +
-            "RNSS" + "_" + config.getRandomNeighborSampleSize() + "_" +
-            "URSS" + "_" + config.getUniformRandomSampleSize() + "_" +
-            "A" + "_" + config.getAlpha() + "_" +
-            "R" + "_" + config.getRounds() + ".txt";
-
+    if (config.getFilename() == null) {
+      outputFilePath = config.getOutputDir() +
+              File.separator +
+              inputFile.getName() + "_" +
+              "NS" + "_" + config.getNodeSelectionPolicy() + "_" +
+              "GICP" + "_" + config.getGraphInitialColorPolicy() + "_" +
+              "T" + "_" + config.getTemperature() + "_" +
+              "D" + "_" + config.getDelta() + "_" +
+              "RNSS" + "_" + config.getRandomNeighborSampleSize() + "_" +
+              "URSS" + "_" + config.getUniformRandomSampleSize() + "_" +
+              "A" + "_" + config.getAlpha() + "_" +
+              "R" + "_" + config.getRounds() + ".txt";
+    } else {
+      outputFilePath = config.getOutputDir() + File.separator + config.getFilename();
+    }
     if (!resultFileCreated) {
       File outputDir = new File(config.getOutputDir());
       if (!outputDir.exists()) {
