@@ -88,9 +88,6 @@ public class Jabeja {
     Node plocal = null;
     Node prandom = null;
 
-    // this was really slow so I updated it; Also, I noticed that it was always selecting the random partner 
-    // I verified with assertions (which break the program when it is runnnig)
-    // so that is why this is different
     if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
             || config.getNodeSelectionPolicy() == NodeSelectionPolicy.LOCAL) {
       // swap with random neighbors
@@ -100,21 +97,14 @@ public class Jabeja {
     if ((config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID && partner == null)
             || config.getNodeSelectionPolicy() == NodeSelectionPolicy.RANDOM) {
       // if local policy fails then randomly sample the entire graph
-      int sampleSize = 15; // arbitrary value
-      Integer[] nodeSamples = new Integer[sampleSize];
-      for(int i = 0; i < sampleSize; i++) {
-        int index = (int) Math.floor(Math.random()*this.nodeIds.size());
-        nodeSamples[i] = this.nodeIds.get(index);
-      }
+      config.setUniformRandSampleSize(15); // arbitrary value
+      Integer[] nodeSamples = getSample(nodeId);
       partner = findPartner(nodeId, nodeSamples);
       prandom = partner;
     }
 
     // swap the colors
     if (partner != null) {
-      // if (prandom != plocal) {
-        // assert(partner != plocal);
-      // }
       int pColor = nodep.getColor();
       nodep.setColor(partner.getColor());
       partner.setColor(pColor);
@@ -127,7 +117,7 @@ public class Jabeja {
     Node nodep = entireGraph.get(nodeId);
 
     Node bestPartner = null;
-    double highestUtil = 0; //sorry my old boss was named Ben and this was weirding me out.
+    double highestUtil = 0;
 
     // TODO
     for (int qId : nodes) {
@@ -138,9 +128,7 @@ public class Jabeja {
 
       int degpq = (int) nodep.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodeq.getColor()).count();
       int degqp = (int) nodeq.getNeighbours().stream().filter(n -> entireGraph.get(n).getColor() == nodep.getColor()).count();
-
-      // the paper's annealing functions -- @Bernard lmk if you think this is incorrect
-      // logger.info("Annealing Policy: " + config.getAnnealingPolicy());
+      
       assert(config.getAnnealingPolicy().equals("default") || config.getAnnealingPolicy().equals("exp"));
       if (config.getAnnealingPolicy().equals("default")) {
         double util = (Math.pow(degpq, this.alpha) + Math.pow(degqp, this.alpha)) * this.T - (Math.pow(degpp, this.alpha) + Math.pow(degqq, this.alpha));
@@ -157,8 +145,6 @@ public class Jabeja {
           highestUtil = next_util;
         }
       }
-      
-      
     }
     return bestPartner;
   }

@@ -7,5 +7,7 @@ datasets/*
 venv/
 *.class
 *.png
-hw5/output/*
-hw5/target/*
+hw5/output/
+hw5/target/
+*.jar
+*.lst
