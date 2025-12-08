@@ -49,11 +49,11 @@ public class Jabeja {
       //reduce the temperature
       saCoolDown();
       int edgeCut = report();
-      updateEdgeDerivative(edgeCut);
-      adjustTemp();
-      // if (round % 500 == 0) {
-      //   T = config.getTemperature();
-      // }
+      // updateEdgeDerivative(edgeCut);
+      // adjustTemp();
+      if (round % 500 == 0) {
+        T = config.getTemperature();
+      }
     }
   }
 

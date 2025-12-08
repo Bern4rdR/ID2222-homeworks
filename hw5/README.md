@@ -83,6 +83,94 @@ public Node findPartner(int nodeId, Integer[] nodes){
 }
 ```
 
+### Task 2
+For task 2, we had to compare different annealing techniques. We vary both the acceptanceProbability (will a node swap) and the Temperature descent rate:
+```java
+private boolean acceptanceProbabilty(double old_util, double new_util) {
+    double delta_ratio = (new_util - old_util)/this.T;
+    double acceptance_probability = Math.exp(delta_ratio);
+    return Math.random() < acceptance_probability;
+  }
+```
+```java
+private void saCoolDown(){
+    if (config.getTempPolicy().equals("default")) {
+      if (T > 1)
+        T = T - this.delta;
+      if (T < 1)
+        T = 1;
+    } else if (config.getTempPolicy().equals("log")) {
+      T = T * (1 - this.delta); // approaches 0
+    }
+    
+  }
+```
+So, with new ways to determine acceptance, we can compare to the Task 1 implementation:
+**Default -- Task 1**
+![3elt.graph](bonus_graphs/default.txt.png)
+**With Exp Acceptance Probability**
+![3elt.graph](bonus_graphs/exp.txt.png)
+**With "Power Law" Cooldown"**
+![3elt.graph](bonus_graphs/log.txt.png)
+
+We don't see a lot of difference between the behaviors here. 
+
+This task also asked us to consider resetting the temperature from time to time - it suggests waiting until well after the algo has stabilized - so we reset every 500 steps, and test again with 3elt.
+**Default With Cooldown Reset **
+![3elt.graph](bonus_graphs/defaultPeriod.txt.png)
+**With Exp Acceptance Probability**
+![3elt.graph](bonus_graphs/graph3eltd005exp.png)
+**With "Power Law" Cooldown"**
+![3elt.graph](bonus_graphs/graph3eltd005explog.png)
+
+This shows us something really interesting - the default function to determining when to swap easily gets stuck. Because the exp function is probability based, it can always swap sometimes. We also see across both sets of results that the slower inverse exponential cooldown seems to behave worse than the linear cooldown. I believe this is because more bad swaps are made and as a result it takes longer to "anneal".
+
+### Bonus Task
+We are tasked with improving the algorithm. After some testing, I couldn't find a better annealing function than the second one. Also, we know that a linear cooldown is better than a slower inverse exponential one. The first improvement is just to automatically reset the temperature when the algo freezes. This means we can more rapidly iterate:
+```java
+  private void adjustTemp() {
+    if (T > 1) {
+      return;
+    }
+    if (getEdgeDerivative() < 1.0) {
+      T = config.getTemperature();
+      logger.info("\n\nTemperature Reset: " + round + "\n\n");
+    }
+  }
+
+  private void updateEdgeDerivative(Integer edge_cut) {
+    if (derivative.size() == dSize) {
+      derivative.removeFirst();
+    }
+    derivative.addLast(edge_cut);
+  }
+
+  private double getEdgeDerivative() {
+    if (derivative.size() < 2) {
+      return 10000.0; // anything big is fine
+    }
+    return (derivative.getLast() - derivative.getFirst())/dSize;
+  }
+```
+And we can view the results:
+**With Exp Acceptance Probability**
+![3elt.graph](bonus_graphs/d1/graph3eltDynamic5k.png)
+**With "Power Law" Cooldown"**
+![3elt.graph](bonus_graphs/d1/graph3eltDynamic5klog.png)
+
+We can see that compared to the fixed interval temperature reset, this gets to a lower edgecut - about 800 edges less than the fixed interval at 5000 rounds. I experimented with different values and buffer sizes, but this seemed to be the best.
+
+However, in all of these tests we are using the default num_partitions=4. But what if there aren't 4 clusters? Let's look at 3elt again:
+**Exp 5p with 2 Partitions**
+![3elt.graph](bonus_graphs/exp5k2part.txt.png)
+
+We have a better edge cut at 2 partitions than 4 - so maybe there are two clusters? We would expect cutting through a cluster imparts a high edge cost, but it is hard to say with these values.
+We can look at the fiedler:
+**3elt Feidler Vector**
+![3elt.graph](bonus_graphs/3eltfiedler.png)
+
+And that is a mess, so it is going to be very difficult to use the fielder vector to automatically select number of clusters.
+
 ## Results
 **3elt graph**
 ![3eld.graph](3elt.png)
