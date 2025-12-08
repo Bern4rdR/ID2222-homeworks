@@ -6,7 +6,6 @@ datasets/*
 *.tsv
 venv/
 *.class
-*.png
 hw5/output/
 hw5/target/
 *.jar
