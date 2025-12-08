@@ -22,6 +22,8 @@ public class Jabeja {
   private boolean resultFileCreated = false;
   private float alpha;
   private float delta;
+  private int dSize = 100;
+  private Deque<Integer> derivative = new ArrayDeque<>(dSize);
 
   //-------------------------------------------------------------------
   public Jabeja(HashMap<Integer, Node> graph, Config config) {
@@ -46,10 +48,12 @@ public class Jabeja {
       //one cycle for all nodes have completed.
       //reduce the temperature
       saCoolDown();
-      report();
-      if (round % 500 == 0) {
-        T = config.getTemperature();
-      }
+      int edgeCut = report();
+      updateEdgeDerivative(edgeCut);
+      adjustTemp();
+      // if (round % 500 == 0) {
+      //   T = config.getTemperature();
+      // }
     }
   }
 
@@ -66,6 +70,30 @@ public class Jabeja {
       T = T * (1 - this.delta); // approaches 0
     }
     
+  }
+
+  private void adjustTemp() {
+    if (T > 1) {
+      return;
+    }
+    if (getEdgeDerivative() < 1.0) {
+      T = config.getTemperature();
+      logger.info("\n\nTemperature Reset: " + round + "\n\n");
+    }
+  }
+
+  private void updateEdgeDerivative(Integer edge_cut) {
+    if (derivative.size() == dSize) {
+      derivative.removeFirst();
+    }
+    derivative.addLast(edge_cut);
+  }
+
+  private double getEdgeDerivative() {
+    if (derivative.size() < 2) {
+      return 10000.0; // anything big is fine
+    }
+    return (derivative.getLast() - derivative.getFirst())/dSize;
   }
 
   private boolean acceptanceProbabilty(double old_util, double new_util) {
@@ -233,7 +261,7 @@ public class Jabeja {
    *
    * @throws IOException
    */
-  private void report() throws IOException {
+  private int report() throws IOException {
     int grayLinks = 0;
     int migrations = 0; // number of nodes that have changed the initial color
     int size = entireGraph.size();
@@ -259,13 +287,13 @@ public class Jabeja {
     }
 
     int edgeCut = grayLinks / 2;
-
     logger.info("round: " + round +
             ", edge cut:" + edgeCut +
             ", swaps: " + numberOfSwaps +
             ", migrations: " + migrations);
 
     saveToFile(edgeCut, migrations);
+    return edgeCut;
   }
 
   private void saveToFile(int edgeCuts, int migrations) throws IOException {
