@@ -10,7 +10,7 @@ Vivienne Curewitz -- [curewitz@kth.se](mailto:curewitz@kth.se)
 - 3elt
 - add20
 
-## Soluction
+## Solution
 For the main part of the graph partitioning, `sampleAndSwap` takes a node and swaps the color with another node. It selects a sample of nodes based on a selection policy: neighbors or random sample. It then gives the sample to the function `findPartner` which selects the node with the highest utility to swap colors with. Depending on the selection policy, the candidate node will either be selected from the neighbors or a random sample set. The problem with this is that it may achieve a local maximum which may hinder it from finding a better solution. That's why task 2 adds annealing to possibly select a node with worse utility which may avoid falling into a local maximum.
 
 ```java
